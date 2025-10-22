@@ -1,9 +1,9 @@
 name: jsafe
 description: Resilient JSON parsing utilities and json_serializable converters for Dart/Flutter.
-version: 0.1.0
-repository: https://example.com/your-repo
-homepage: https://example.com/your-repo
-issue_tracker: https://example.com/your-repo/issues
+version: 0.1.1
+repository: https://github.com/usman1170/jsafe
+homepage: https://github.com/usman1170/jsafe
+issue_tracker: https://github.com/usman1170/jsafe/issues
 
 environment:
   sdk: '^3.9.0'

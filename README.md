@@ -1,11 +1,11 @@
-# safe_json
+# jsafe
 
 
 Resilient JSON parsing utilities and `json_serializable` converters for Dart/Flutter.
 
 
 ## Why
-Backends drift. Fields go null, types flip ("1" vs 1), arrays become singletons, etc. `safe_json` makes your parsing forgiving without hiding problems.
+Backends drift. Fields go null, types flip ("1" vs 1), arrays become singletons, etc. `jsafe` makes your parsing forgiving without hiding problems.
 
 
 ## Highlights
@@ -21,7 +21,7 @@ Backends drift. Fields go null, types flip ("1" vs 1), arrays become singletons,
 
 ## Quick start
 ```dart
-import 'package:safe_json/safe_json.dart';
+import 'package:jsafe/jsafe.dart';
 
 
 final map = {
