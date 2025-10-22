@@ -1,0 +1,4 @@
+include: package:lints/recommended.yaml
+linter:
+rules:
+avoid_print: false # we use guarded debug logs; flip to true if you prefer
