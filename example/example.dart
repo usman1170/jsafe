@@ -50,11 +50,11 @@ class GetPaymentMethodsModel {
   }
 
   Map<String, dynamic> toJson() => JSafe.omitNulls({
-    'statusCode': statusCode,
-    'isSuccess': isSuccess,
-    'message': message,
-    'paymentMethods': paymentMethods.map((x) => x.toJson()).toList(),
-  });
+        'statusCode': statusCode,
+        'isSuccess': isSuccess,
+        'message': message,
+        'paymentMethods': paymentMethods.map((x) => x.toJson()).toList(),
+      });
 }
 
 class PaymentMethod {
@@ -80,9 +80,9 @@ class PaymentMethod {
   }
 
   Map<String, dynamic> toJson() => JSafe.omitNulls({
-    'PaymentMethodId': paymentMethodId,
-    'PaymentMethodCode': paymentMethodCode,
-    'TotalAmount': totalAmount,
-    'ImageUrl': imageUrl,
-  });
+        'PaymentMethodId': paymentMethodId,
+        'PaymentMethodCode': paymentMethodCode,
+        'TotalAmount': totalAmount,
+        'ImageUrl': imageUrl,
+      });
 }

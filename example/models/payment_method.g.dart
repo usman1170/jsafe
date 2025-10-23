@@ -16,9 +16,11 @@ PaymentMethod _$PaymentMethodFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$PaymentMethodToJson(
   PaymentMethod instance,
-) => <String, dynamic>{
-  'paymentMethodId': const SafeInt().toJson(instance.paymentMethodId),
-  'paymentMethodCode': const SafeString().toJson(instance.paymentMethodCode),
-  'totalAmount': const SafeInt().toJson(instance.totalAmount),
-  'imageUrl': const SafeString().toJson(instance.imageUrl),
-};
+) =>
+    <String, dynamic>{
+      'paymentMethodId': const SafeInt().toJson(instance.paymentMethodId),
+      'paymentMethodCode':
+          const SafeString().toJson(instance.paymentMethodCode),
+      'totalAmount': const SafeInt().toJson(instance.totalAmount),
+      'imageUrl': const SafeString().toJson(instance.imageUrl),
+    };
