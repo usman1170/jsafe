@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.1.0 - 2025-10-23
+## 1.1.1 - 2025-10-23
 
 ### Added
 - Fully resilient JSON parsing utilities for Dart/Flutter.
@@ -19,6 +19,8 @@ All notable changes to this project will be documented in this file.
   - Generate nested Dart models automatically from JSON
   - Handles lists, nested objects, and non-nullable fields
   - Ensures fully serializable `toJson` output
+  
+- Small bug fix
 
 ### Changed
 - Method names updated from old aliases (`str/int_/dbl/bool_/num_`) to more descriptive names.
