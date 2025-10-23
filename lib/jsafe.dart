@@ -97,8 +97,9 @@ class JSafe {
   static num number(dynamic value, {num orDefault = 0}) => _wrap(
     () {
       if (value == null) return orDefault;
-      if (value is num)
+      if (value is num) {
         return (value.isNaN || value.isInfinite) ? orDefault : value;
+      }
       if (value is String) {
         final s = value.trim().replaceAll(',', '');
         final n = num.tryParse(s);
@@ -127,8 +128,9 @@ class JSafe {
 
   static DateTime dateTime(dynamic value, {DateTime? orDefault}) => _wrap(
     () {
-      if (value == null)
+      if (value == null) {
         return orDefault ?? DateTime.fromMillisecondsSinceEpoch(0);
+      }
       if (value is DateTime) return value;
       if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
       if (value is String) {

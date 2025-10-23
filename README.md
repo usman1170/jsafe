@@ -1,23 +1,36 @@
 # jsafe
 
-Resilient JSON parsing utilities and `json_serializable` converters for Dart/Flutter.
+Resilient JSON parsing utilities, `json_serializable` converters, and a **CLI JSON-to-Dart model generator** for Dart/Flutter.
+
+---
 
 ## Why
-Backends drift. Fields go null, types flip ("1" vs 1), arrays become singletons, etc. `jsafe` makes your parsing forgiving without hiding problems.
+Backends drift. Fields go null, types flip ("1" vs 1), arrays become singletons, etc. `jsafe` makes your parsing forgiving without hiding problems.  
+
+`jsafe` is perfect for Flutter and Dart projects that need **robust JSON parsing** with deep nesting, lists of objects, enums, and safe `DateTime` handling.  
+It also comes with a **CLI generator** to create Dart models from JSON automatically, saving time and avoiding boilerplate.
+
+---
 
 ## Highlights
-- Safe scalar parsing:
+- **Safe scalar parsing**:
   - Non-nullable: `string`, `integer`, `double_`, `boolean`, `number`
   - Nullable: `stringN`, `integerN`, `doubleN`, `booleanN`, `numberN`
-- ISO & epoch-millis `DateTime` parsing: `dateTime` / `dateTimeN`
-- Enum parsing with fallback: `enumValue`
-- Deep getter: `JSafe.getAt(map, 'a.b[0].c')`
-- `mapList` for nested lists
-- `omitNulls` for clean `toJson`
-- Debug (`JSafe.debugLogs`) & strict (`JSafe.strictThrow`) flags to surface backend regressions in dev
-- `json_serializable` converters included
+- **ISO & epoch-millis `DateTime` parsing**: `dateTime` / `dateTimeN`
+- **Enum parsing** with fallback: `enumValue`
+- **Deep getter**: `JSafe.getAt(map, 'a.b[0].c')`
+- **Nested lists**: `mapList` for nested lists of objects
+- **Clean `toJson`**: `omitNulls` to remove nulls recursively
+- **Debug & strict flags**: 
+  - `JSafe.debugLogs` → prints parsing warnings
+  - `JSafe.strictThrow` → throws exceptions on unexpected types
+- **`json_serializable` converters** included
+- **CLI support**: Generate Dart models from JSON with `jsafe` generator
 
-## Quick start
+---
+
+## Quick Start
+
 ```dart
 import 'package:jsafe/jsafe.dart';
 

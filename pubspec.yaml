@@ -1,6 +1,6 @@
 name: jsafe
 description: Resilient JSON parsing utilities and json_serializable converters for Dart/Flutter.
-version: 0.2.0
+version: 1.0.0
 repository: https://github.com/usman1170/jsafe
 homepage: https://github.com/usman1170/jsafe
 issue_tracker: https://github.com/usman1170/jsafe/issues
@@ -11,9 +11,15 @@ environment:
 dependencies:
   meta: ^1.15.0
   json_annotation: ^4.9.0
+  path: ^1.9.1
+  args: ^2.7.0
 
 dev_dependencies:
   lints: ^5.0.0
   test: ^1.25.0
   build_runner: ^2.4.13
   json_serializable: ^6.8.0
+
+
+executables:
+  jsafe: bin/jsafe_cli.dart

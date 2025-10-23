@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.2.0 - 2025-10-23
+## 1.0.0 - 2025-10-23
 
 ### Added
 - Fully resilient JSON parsing utilities for Dart/Flutter.
@@ -12,12 +12,17 @@ All notable changes to this project will be documented in this file.
 - DateTime parsing: `dateTime` and `dateTimeN` (supports ISO & epoch-millis)
 - Enum parsing helper: `enumValue` with fallback
 - Deep getter for nested maps/lists: `JSafe.getAt(map, 'a.b[0].c')`
-- List mapping helper: `JSafe.mapList`
+- List mapping helper: `JSafe.mapList` for nested objects
 - Recursive null-omitting helper: `JSafe.omitNulls`
 - Debug & strict mode toggles: `JSafe.debugLogs` and `JSafe.strictThrow`
+- **CLI JSON-to-Dart model generator**:
+  - Generate nested Dart models automatically from JSON
+  - Handles lists, nested objects, and non-nullable fields
+  - Ensures fully serializable `toJson` output
 
 ### Changed
 - Method names updated from old aliases (`str/int_/dbl/bool_/num_`) to more descriptive names.
+- Updated README and docs to highlight CLI usage.
 
 ### Fixed
 - Improved parsing of numeric strings with commas (e.g., `"1,234.56"`)
