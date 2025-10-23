@@ -39,9 +39,9 @@ class GetPaymentMethodsModel {
   factory GetPaymentMethodsModel.fromJson(Map<String, dynamic> json) {
     final map = JSafe.map(json);
     return GetPaymentMethodsModel(
-      statusCode: JSafe.int_(map['statusCode']),
-      isSuccess: JSafe.bool_(map['isSuccess']),
-      message: JSafe.str(map['message']),
+      statusCode: JSafe.integer(map['statusCode']),
+      isSuccess: JSafe.boolean(map['isSuccess']),
+      message: JSafe.string(map['message']),
       paymentMethods: JSafe.mapList(
         map['paymentMethods'],
         (e) => PaymentMethod.fromJson(JSafe.map(e)),
@@ -72,10 +72,10 @@ class PaymentMethod {
   factory PaymentMethod.fromJson(Map<String, dynamic> json) {
     final m = JSafe.map(json);
     return PaymentMethod(
-      paymentMethodId: JSafe.int_(m['PaymentMethodId']),
-      paymentMethodCode: JSafe.str(m['PaymentMethodCode']),
-      totalAmount: JSafe.int_(m['TotalAmount']),
-      imageUrl: JSafe.str(m['ImageUrl']),
+      paymentMethodId: JSafe.integer(m['PaymentMethodId']),
+      paymentMethodCode: JSafe.string(m['PaymentMethodCode']),
+      totalAmount: JSafe.integer(m['TotalAmount']),
+      imageUrl: JSafe.string(m['ImageUrl']),
     );
   }
 

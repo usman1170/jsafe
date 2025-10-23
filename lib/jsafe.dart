@@ -1,12 +1,13 @@
 /// A robust, fail-soft JSON helper for Dart/Flutter.
 ///
-/// - Tolerates nulls and type mismatches
-/// - Nullable and non-nullable getters (with defaults)
-/// - DateTime parsing (ISO or epoch millis)
-/// - Enum parsing with fallback
-/// - Deep path getter (e.g., "a.b[0].c")
-/// - List mapping helpers
-/// - Null-omitting toJson helper
+/// JSafe provides resilient JSON parsing utilities to safely extract values
+/// without crashing on type mismatches, nulls, or malformed data.
+///
+/// ✅ Safe parsing for all primitives
+/// ✅ Null and default fallbacks
+/// ✅ Deep path access (e.g. `"user.address[0].city"`)
+/// ✅ DateTime, Enum, and List mapping utilities
+/// ✅ Recursive null-omitting `toJson` helper
 class JSafe {
   /// When true, log type mismatches.
   static bool debugLogs = true;
@@ -22,9 +23,9 @@ class JSafe {
 
   static T _wrap<T>(T Function() fn, T fallback, [String? hint]) {
     try {
-      final v = fn();
-      if (v is num && (v.isNaN || v.isInfinite)) return fallback;
-      return v;
+      final value = fn();
+      if (value is num && (value.isNaN || value.isInfinite)) return fallback;
+      return value;
     } catch (e) {
       if (debugLogs) {
         // ignore: avoid_print
@@ -35,110 +36,126 @@ class JSafe {
     }
   }
 
-  // ---------- Scalars (non-nullable with default) ----------
-  static String str(dynamic v, {String orDefault = ''}) => _wrap(
+  // --------------------------------------------------------
+  // 🧩 Scalars (non-nullable with defaults)
+  // --------------------------------------------------------
+
+  static String string(dynamic value, {String orDefault = ''}) => _wrap(
     () {
-      if (v == null) return orDefault;
-      if (v is String) return v;
-      return v.toString();
+      if (value == null) return orDefault;
+      if (value is String) return value;
+      return value.toString();
     },
     orDefault,
-    'str',
+    'string',
   );
 
-  static int int_(dynamic v, {int orDefault = 0}) => _wrap(
+  static int integer(dynamic value, {int orDefault = 0}) => _wrap(
     () {
-      if (v == null) return orDefault;
-      if (v is int) return v;
-      if (v is double) return v.toInt();
-      if (v is String) return int.tryParse(v.trim()) ?? orDefault;
-      if (v is bool) return v ? 1 : 0;
+      if (value == null) return orDefault;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value.trim()) ?? orDefault;
+      if (value is bool) return value ? 1 : 0;
       return orDefault;
     },
     orDefault,
-    'int_',
+    'integer',
   );
 
-  static double dbl(dynamic v, {double orDefault = 0.0}) => _wrap(
+  static double double_(dynamic value, {double orDefault = 0.0}) => _wrap(
     () {
-      if (v == null) return orDefault;
-      if (v is double) return v;
-      if (v is int) return v.toDouble();
-      if (v is String) {
-        final s = v.trim().replaceAll(',', '');
+      if (value == null) return orDefault;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) {
+        final s = value.trim().replaceAll(',', '');
         return double.tryParse(s) ?? orDefault;
       }
-      if (v is bool) return v ? 1.0 : 0.0;
+      if (value is bool) return value ? 1.0 : 0.0;
       return orDefault;
     },
     orDefault,
-    'dbl',
+    'double_',
   );
 
-  static bool bool_(dynamic v, {bool orDefault = false}) => _wrap(
+  static bool boolean(dynamic value, {bool orDefault = false}) => _wrap(
     () {
-      if (v == null) return orDefault;
-      if (v is bool) return v;
-      if (v is num) return v != 0;
-      if (v is String) {
-        final s = v.trim().toLowerCase();
-        return s == 'true' || s == '1' || s == 'yes' || s == 'y';
+      if (value == null) return orDefault;
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) {
+        final s = value.trim().toLowerCase();
+        return ['true', '1', 'yes', 'y'].contains(s);
       }
       return orDefault;
     },
     orDefault,
-    'bool_',
+    'boolean',
   );
 
-  static num num_(dynamic v, {num orDefault = 0}) => _wrap(
+  static num number(dynamic value, {num orDefault = 0}) => _wrap(
     () {
-      if (v == null) return orDefault;
-      if (v is num) return (v.isNaN || v.isInfinite) ? orDefault : v;
-      if (v is String) {
-        final s = v.trim().replaceAll(',', '');
+      if (value == null) return orDefault;
+      if (value is num)
+        return (value.isNaN || value.isInfinite) ? orDefault : value;
+      if (value is String) {
+        final s = value.trim().replaceAll(',', '');
         final n = num.tryParse(s);
         return (n == null || n.isNaN || n.isInfinite) ? orDefault : n;
       }
-      if (v is bool) return v ? 1 : 0;
+      if (value is bool) return value ? 1 : 0;
       return orDefault;
     },
     orDefault,
-    'num_',
+    'number',
   );
-  // ---------- Nullable variants ----------
-  static String? strN(dynamic v) => v == null ? null : str(v);
-  static int? intN(dynamic v) => v == null ? null : int_(v);
-  static double? dblN(dynamic v) => v == null ? null : dbl(v);
-  static bool? boolN(dynamic v) => v == null ? null : bool_(v);
 
-  // ---------- DateTime ----------
-  static DateTime dt(dynamic v, {DateTime? orDefault}) => _wrap(
+  // --------------------------------------------------------
+  // 🌫️ Nullable variants
+  // --------------------------------------------------------
+
+  static String? stringN(dynamic v) => v == null ? null : string(v);
+  static int? integerN(dynamic v) => v == null ? null : integer(v);
+  static double? doubleN(dynamic v) => v == null ? null : double_(v);
+  static bool? booleanN(dynamic v) => v == null ? null : boolean(v);
+  static num? numberN(dynamic v) => v == null ? null : number(v);
+
+  // --------------------------------------------------------
+  // 🕒 DateTime parsing
+  // --------------------------------------------------------
+
+  static DateTime dateTime(dynamic value, {DateTime? orDefault}) => _wrap(
     () {
-      if (v == null) return orDefault ?? DateTime.fromMillisecondsSinceEpoch(0);
-      if (v is DateTime) return v;
-      if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
-      if (v is String) {
+      if (value == null)
+        return orDefault ?? DateTime.fromMillisecondsSinceEpoch(0);
+      if (value is DateTime) return value;
+      if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+      if (value is String) {
         try {
-          return DateTime.parse(v);
+          return DateTime.parse(value);
         } catch (_) {
-          final n = int.tryParse(v);
+          final n = int.tryParse(value);
           if (n != null) return DateTime.fromMillisecondsSinceEpoch(n);
         }
       }
       return orDefault ?? DateTime.fromMillisecondsSinceEpoch(0);
     },
     orDefault ?? DateTime.fromMillisecondsSinceEpoch(0),
-    'dt',
+    'dateTime',
   );
 
-  static DateTime? dtN(dynamic v) => v == null ? null : dt(v);
+  static DateTime? dateTimeN(dynamic v) => v == null ? null : dateTime(v);
 
-  // ---------- Map & List ----------
-  static Map<String, dynamic> map(dynamic v) => _wrap(
+  // --------------------------------------------------------
+  // 🗺️ Map & List helpers
+  // --------------------------------------------------------
+
+  static Map<String, dynamic> map(dynamic value) => _wrap(
     () {
-      if (v is Map<String, dynamic>) return v;
-      if (v is Map) {
-        return v.map((k, val) => MapEntry(k.toString(), val));
+      if (value is Map<String, dynamic>) return value;
+      if (value is Map) {
+        return value.map((k, v) => MapEntry(k.toString(), v));
       }
       return <String, dynamic>{};
     },
@@ -146,19 +163,16 @@ class JSafe {
     'map',
   );
 
-  static List<T> list<T>(dynamic v) => _wrap(
+  static List<T> list<T>(dynamic value) => _wrap(
     () {
-      if (v is List<T>) return v;
-      if (v is List) {
-        return v.map((e) => e as T).toList();
-      }
+      if (value is List<T>) return value;
+      if (value is List) return value.cast<T>();
       return <T>[];
     },
     <T>[],
     'list',
   );
 
-  /// Map a list of dynamic items to models.
   static List<T> mapList<T>(dynamic v, T Function(dynamic) convert) {
     final raw = list<dynamic>(v);
     final out = <T>[];
@@ -168,15 +182,18 @@ class JSafe {
     return out.where((e) => e != null).toList();
   }
 
-  // ---------- Enum ----------
-  static T enum_<T>(
+  // --------------------------------------------------------
+  // 🧱 Enum helpers
+  // --------------------------------------------------------
+
+  static T enumValue<T>(
     dynamic v,
     List<T> values,
     T orDefault, {
     String Function(T)? toKey,
     bool caseInsensitive = true,
   }) {
-    final key = str(v);
+    final key = string(v);
     if (key.isEmpty) return orDefault;
     final norm = caseInsensitive ? key.toLowerCase() : key;
     for (final val in values) {
@@ -187,6 +204,10 @@ class JSafe {
     return orDefault;
   }
 
+  // --------------------------------------------------------
+  // 🔍 Deep getter
+  // --------------------------------------------------------
+
   static dynamic getAt(Map<String, dynamic> m, String path) {
     dynamic cur = m;
     for (final seg in path.split('.')) {
@@ -194,7 +215,7 @@ class JSafe {
         final matchIndex = RegExp(r'(\w+)(\[(\d+)\])?').firstMatch(seg);
         if (matchIndex == null) return null;
         final key = matchIndex.group(1)!;
-        cur = (cur)[key];
+        cur = cur[key];
         final idxStr = matchIndex.group(3);
         if (idxStr != null) {
           if (cur is List) {
@@ -212,7 +233,11 @@ class JSafe {
     return cur;
   }
 
-  /// Remove nulls recursively for `toJson`.
+  // --------------------------------------------------------
+  // 🧹 JSON cleanup
+  // --------------------------------------------------------
+
+  /// Removes all null values recursively from the given map.
   static Map<String, dynamic> omitNulls(Map<String, dynamic> map) {
     final out = <String, dynamic>{};
     map.forEach((k, v) {
