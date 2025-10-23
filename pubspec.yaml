@@ -6,7 +6,7 @@ homepage: https://github.com/usman1170/jsafe
 issue_tracker: https://github.com/usman1170/jsafe/issues
 
 environment:
-  sdk: '^3.9.0'
+  sdk: '>=3.7.0 <4.0.0'
 
 dependencies:
   meta: ^1.15.0
