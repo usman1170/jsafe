@@ -3,6 +3,11 @@
 class ModelGenerator {
   static final _generatedClasses = <String>{};
 
+  /// Regex to detect ISO 8601 timestamps.
+  static final _iso8601Regex = RegExp(
+    r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|([+-]\d{2}:\d{2}))?$',
+  );
+
   /// Generates Dart code for the given className and JSON map
   static String generate(String className, Map<String, dynamic> json) {
     _generatedClasses.clear();
@@ -45,13 +50,15 @@ class ModelGenerator {
     // Fields
     json.forEach((key, value) {
       final type = _inferType(key, value, nestedBuffers, prefix: prefix);
-      buffer.writeln('  final $type $key;');
+      final dartField = _toCamelCase(key); // Convert to camelCase
+      buffer.writeln('  final $type $dartField;');
     });
 
     // Constructor
     buffer.writeln('\n  $className({');
     json.forEach((key, value) {
-      buffer.writeln('    required this.$key,');
+      final dartField = _toCamelCase(key); // Convert to camelCase
+      buffer.writeln('    required this.$dartField,');
     });
     buffer.writeln('  });\n');
 
@@ -59,12 +66,14 @@ class ModelGenerator {
     buffer.writeln('  $className copyWith({');
     json.forEach((key, value) {
       final type = _inferType(key, value, [], prefix: prefix);
-      buffer.writeln('    $type? $key,');
+      final dartField = _toCamelCase(key); // Convert to camelCase
+      buffer.writeln('    $type? $dartField,');
     });
     buffer.writeln('  }) {');
     buffer.writeln('    return $className(');
     json.forEach((key, value) {
-      buffer.writeln('      $key: $key ?? this.$key,');
+      final dartField = _toCamelCase(key); // Convert to camelCase
+      buffer.writeln('      $dartField: $dartField ?? this.$dartField,');
     });
     buffer.writeln('    );');
     buffer.writeln('  }\n');
@@ -76,17 +85,54 @@ class ModelGenerator {
     buffer.writeln('    return $className(');
     json.forEach((key, value) {
       final type = _inferType(key, value, [], prefix: prefix);
-      buffer.writeln('      $key: ${_fromJsonExpression(key, value, type)},');
+      final dartField = _toCamelCase(key); // Convert to camelCase
+      // Use original 'key' for json lookup, but 'dartField' for assignment
+      buffer.writeln(
+          '      $dartField: ${_fromJsonExpression(key, value, type)},');
     });
     buffer.writeln('    );');
     buffer.writeln('  }\n');
 
-    // toJson
+    // --- START: MODIFIED toJson ---
     buffer.writeln('  Map<String, dynamic> toJson() => {');
     json.forEach((key, value) {
-      buffer.writeln('    \'$key\': $key,');
+      final dartField = _toCamelCase(key);
+      final type = _inferType(key, value, [], prefix: prefix);
+
+      String toJsonExpression;
+      if (type.startsWith('List<')) {
+        final innerType = type.substring(5, type.length - 1);
+        if (_isPrimitive(innerType)) {
+          if (innerType == 'DateTime') {
+            toJsonExpression =
+                '$dartField.map((e) => e.toIso8601String()).toList()';
+          } else {
+            // Primitive lists (List<String>, List<int>) are fine as-is
+            toJsonExpression = dartField;
+          }
+        } else {
+          // List of custom objects
+          toJsonExpression = '$dartField.map((e) => e.toJson()).toList()';
+        }
+      } else if (_isPrimitive(type)) {
+        if (type == 'DateTime') {
+          // Convert DateTime back to ISO 8601 string
+          toJsonExpression = '$dartField.toIso8601String()';
+        } else {
+          // Primitives (String, int, bool, double) are fine as-is
+          toJsonExpression = dartField;
+        }
+      } else if (type == 'dynamic') {
+        toJsonExpression = dartField;
+      } else {
+        // Single custom object
+        toJsonExpression = '$dartField.toJson()';
+      }
+
+      buffer.writeln('    \'$key\': $toJsonExpression,');
     });
     buffer.writeln('  };');
+    // --- END: MODIFIED toJson ---
 
     buffer.writeln('}');
 
@@ -105,6 +151,12 @@ class ModelGenerator {
     if (value is int) return 'int';
     if (value is double) return 'double';
     if (value is bool) return 'bool';
+
+    // Check for DateTime string BEFORE general String
+    if (value is String && _iso8601Regex.hasMatch(value)) {
+      return 'DateTime';
+    }
+
     if (value is String) return 'String';
 
     if (value is Map<String, dynamic>) {
@@ -126,6 +178,7 @@ class ModelGenerator {
           '${prefix}_${key}Model',
         ); // Use base prefix
         final buf = StringBuffer();
+        // Pass the first item to generate the class structure
         _generateClass(buf, nestedClassName, first, prefix: prefix);
         nestedBuffers.add(buf);
         return 'List<$nestedClassName>';
@@ -156,7 +209,7 @@ class ModelGenerator {
   }
 
   static bool _isPrimitive(String type) =>
-      ['int', 'double', 'String', 'bool', 'num'].contains(type);
+      ['int', 'double', 'String', 'bool', 'num', 'DateTime'].contains(type);
 
   static String _jsafeMethod(String type) {
     switch (type) {
@@ -170,6 +223,8 @@ class ModelGenerator {
         return 'number';
       case 'String':
         return 'string';
+      case 'DateTime':
+        return 'dateTime';
       default:
         return 'string';
     }
@@ -180,5 +235,31 @@ class ModelGenerator {
     return words
         .map((w) => w.isNotEmpty ? w[0].toUpperCase() + w.substring(1) : '')
         .join();
+  }
+
+  /// Converts a snake_case string to camelCase.
+  static String _toCamelCase(String snakeCase) {
+    if (snakeCase.isEmpty) {
+      return snakeCase;
+    }
+
+    List<String> parts = snakeCase.split('_');
+
+    if (parts.length == 1) {
+      return snakeCase;
+    }
+
+    // Start with the first part (which is already lowercase)
+    String camelCase = parts[0];
+
+    // Iterate from the second part onwards
+    for (int i = 1; i < parts.length; i++) {
+      String part = parts[i];
+      if (part.isNotEmpty) {
+        // Capitalize the first letter and add the rest
+        camelCase += part[0].toUpperCase() + part.substring(1);
+      }
+    }
+    return camelCase;
   }
 }
