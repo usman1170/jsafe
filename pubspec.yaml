@@ -1,6 +1,6 @@
 name: jsafe
 description: Automated CLI model generator + safe JSON parsing + json_serializable converters for Dart/Flutter.
-version: 1.1.2
+version: 1.1.3
 repository: https://github.com/usman1170/jsafe
 homepage: https://github.com/usman1170/jsafe
 issue_tracker: https://github.com/usman1170/jsafe/issues

@@ -1,15 +1,9 @@
+// lib/jsafe.dart
+// Hardened JSafe with strict-mode enforcement for list<T> primitive conversions.
+
 /// A robust, fail-soft JSON helper for Dart/Flutter.
-///
-/// JSafe provides resilient JSON parsing utilities to safely extract values
-/// without crashing on type mismatches, nulls, or malformed data.
-///
-/// ✅ Safe parsing for all primitives
-/// ✅ Null and default fallbacks
-/// ✅ Deep path access (e.g. `"user.address[0].city"`)
-/// ✅ DateTime, Enum, and List mapping utilities
-/// ✅ Recursive null-omitting `toJson` helper
 class JSafe {
-  /// When true, log type mismatches.
+  /// When true, log type mismatches and parse errors.
   static bool debugLogs = true;
 
   /// When true, rethrow parsing errors (useful in tests or local dev).
@@ -24,12 +18,14 @@ class JSafe {
   static T _wrap<T>(T Function() fn, T fallback, [String? hint]) {
     try {
       final value = fn();
-      if (value is num && (value.isNaN || value.isInfinite)) return fallback;
+      if (value is num) {
+        if (value.isNaN || value.isInfinite) return fallback;
+      }
       return value;
-    } catch (e) {
+    } catch (e, st) {
       if (debugLogs) {
         // ignore: avoid_print
-        print('JSafe($hint): $e');
+        print('JSafe($hint): $e\n$st');
       }
       if (strictThrow) rethrow;
       return fallback;
@@ -37,7 +33,7 @@ class JSafe {
   }
 
   // --------------------------------------------------------
-  // 🧩 Scalars (non-nullable with defaults)
+  // Scalars (non-nullable with defaults)
   // --------------------------------------------------------
 
   static String string(dynamic value, {String orDefault = ''}) => _wrap(
@@ -86,7 +82,7 @@ class JSafe {
           if (value is num) return value != 0;
           if (value is String) {
             final s = value.trim().toLowerCase();
-            return ['true', '1', 'yes', 'y'].contains(s);
+            return ['true', '1', 'yes', 'y', 'on'].contains(s);
           }
           return orDefault;
         },
@@ -103,7 +99,7 @@ class JSafe {
           if (value is String) {
             final s = value.trim().replaceAll(',', '');
             final n = num.tryParse(s);
-            return (n == null || n.isNaN || n.isInfinite) ? orDefault : n;
+            return (n == null || ((n.isNaN || n.isInfinite))) ? orDefault : n;
           }
           if (value is bool) return value ? 1 : 0;
           return orDefault;
@@ -113,7 +109,7 @@ class JSafe {
       );
 
   // --------------------------------------------------------
-  // 🌫️ Nullable variants
+  // Nullable variants
   // --------------------------------------------------------
 
   static String? stringN(dynamic v) => v == null ? null : string(v);
@@ -123,25 +119,53 @@ class JSafe {
   static num? numberN(dynamic v) => v == null ? null : number(v);
 
   // --------------------------------------------------------
-  // 🕒 DateTime parsing
+  // DateTime parsing (seconds vs ms heuristic)
   // --------------------------------------------------------
 
   static DateTime dateTime(dynamic value, {DateTime? orDefault}) => _wrap(
         () {
-          if (value == null) {
-            return orDefault ?? DateTime.fromMillisecondsSinceEpoch(0);
-          }
+          final def = orDefault ?? DateTime.fromMillisecondsSinceEpoch(0);
+          if (value == null) return def;
           if (value is DateTime) return value;
-          if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-          if (value is String) {
-            try {
-              return DateTime.parse(value);
-            } catch (_) {
-              final n = int.tryParse(value);
-              if (n != null) return DateTime.fromMillisecondsSinceEpoch(n);
+
+          if (value is int) {
+            if (value.abs() < 100000000000) {
+              return DateTime.fromMillisecondsSinceEpoch(value * 1000);
+            } else {
+              return DateTime.fromMillisecondsSinceEpoch(value);
             }
           }
-          return orDefault ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+          if (value is String) {
+            final s = value.trim();
+
+            // Try integer-epoch first (numeric-only string)
+            final n = int.tryParse(s);
+            if (n != null) {
+              if (n.abs() < 100000000000) {
+                return DateTime.fromMillisecondsSinceEpoch(n * 1000);
+              } else {
+                return DateTime.fromMillisecondsSinceEpoch(n);
+              }
+            }
+
+            // Fall back to ISO parse
+            try {
+              return DateTime.parse(s);
+            } catch (_) {
+              final alt = double.tryParse(s.replaceAll(',', ''));
+              if (alt != null) {
+                final millis = alt.toInt();
+                if (millis.abs() < 100000000000) {
+                  return DateTime.fromMillisecondsSinceEpoch(millis * 1000);
+                } else {
+                  return DateTime.fromMillisecondsSinceEpoch(millis);
+                }
+              }
+            }
+          }
+
+          return def;
         },
         orDefault ?? DateTime.fromMillisecondsSinceEpoch(0),
         'dateTime',
@@ -150,7 +174,7 @@ class JSafe {
   static DateTime? dateTimeN(dynamic v) => v == null ? null : dateTime(v);
 
   // --------------------------------------------------------
-  // 🗺️ Map & List helpers
+  // Map & List helpers (improved and strict-aware)
   // --------------------------------------------------------
 
   static Map<String, dynamic> map(dynamic value) => _wrap(
@@ -165,27 +189,178 @@ class JSafe {
         'map',
       );
 
+  // helper: check whether primitive conversion is actually valid for strict mode
+  static bool _primitiveConversionValidForStrict<T>(dynamic original) {
+    if (original == null) return false;
+
+    if (T == String) {
+      // Any non-null original can be turned into a String
+      return true;
+    }
+
+    if (T == int) {
+      if (original is int) return true;
+      if (original is double) return true;
+      if (original is bool) return true;
+      if (original is String) {
+        return int.tryParse(original.trim()) != null;
+      }
+      return false;
+    }
+
+    if (T == double) {
+      if (original is double) return true;
+      if (original is int) return true;
+      if (original is bool) return true;
+      if (original is String) {
+        final s = original.trim().replaceAll(',', '');
+        return double.tryParse(s) != null;
+      }
+      return false;
+    }
+
+    if (T == bool) {
+      if (original is bool) return true;
+      if (original is num) return true;
+      if (original is String) {
+        final s = original.trim().toLowerCase();
+        return ['true', '1', 'yes', 'y', 'on', 'false', '0', 'no', 'off']
+            .contains(s);
+      }
+      return false;
+    }
+
+    if (T == num) {
+      if (original is num) return true;
+      if (original is String) {
+        final s = original.trim().replaceAll(',', '');
+        return num.tryParse(s) != null;
+      }
+      return false;
+    }
+
+    // For other generic/complex T we can't validate here.
+    return false;
+  }
+
   static List<T> list<T>(dynamic value) => _wrap(
         () {
-          if (value is List<T>) return value;
-          if (value is List) return value.cast<T>();
+          if (value is List<T>) return List<T>.from(value);
+
+          if (value is List) {
+            // Fast path: if every element is already T, return a copy.
+            var allMatch = true;
+            for (final e in value) {
+              if (e is! T) {
+                allMatch = false;
+                break;
+              }
+            }
+            if (allMatch) {
+              return value.map((e) => e as T).toList();
+            }
+
+            // Otherwise element-wise conversion for primitives; skip complex types.
+            final out = <T>[];
+            for (final e in value) {
+              if (e is T) {
+                out.add(e);
+                continue;
+              }
+
+              // Primitive conversions:
+              try {
+                if (T == String) {
+                  final v = string(e);
+                  if (strictThrow &&
+                      !_primitiveConversionValidForStrict<T>(e)) {
+                    throw FormatException(
+                        'strict mode: cannot convert to String: $e');
+                  }
+                  out.add(v as T);
+                  continue;
+                }
+
+                if (T == int) {
+                  final v = integer(e);
+                  if (strictThrow &&
+                      !_primitiveConversionValidForStrict<T>(e)) {
+                    throw FormatException(
+                        'strict mode: cannot convert to int: $e');
+                  }
+                  out.add(v as T);
+                  continue;
+                }
+
+                if (T == double) {
+                  final v = double_(e);
+                  if (strictThrow &&
+                      !_primitiveConversionValidForStrict<T>(e)) {
+                    throw FormatException(
+                        'strict mode: cannot convert to double: $e');
+                  }
+                  out.add(v as T);
+                  continue;
+                }
+
+                if (T == bool) {
+                  final v = boolean(e);
+                  if (strictThrow &&
+                      !_primitiveConversionValidForStrict<T>(e)) {
+                    throw FormatException(
+                        'strict mode: cannot convert to bool: $e');
+                  }
+                  out.add(v as T);
+                  continue;
+                }
+
+                if (T == num) {
+                  final v = number(e);
+                  if (strictThrow &&
+                      !_primitiveConversionValidForStrict<T>(e)) {
+                    throw FormatException(
+                        'strict mode: cannot convert to num: $e');
+                  }
+                  out.add(v as T);
+                  continue;
+                }
+
+                // complex types (models): can't auto-convert here — skip
+              } catch (e) {
+                // If conversion threw and strictThrow set, bubble up
+                if (strictThrow) rethrow;
+                // otherwise skip this element
+              }
+            }
+            return out;
+          }
           return <T>[];
         },
         <T>[],
         'list',
       );
 
+  static List<String> stringList(dynamic v) =>
+      list<dynamic>(v).map((e) => string(e)).toList();
+
+  static List<int> intList(dynamic v) =>
+      list<dynamic>(v).map((e) => integer(e)).toList();
+
+  static List<double> doubleList(dynamic v) =>
+      list<dynamic>(v).map((e) => double_(e)).toList();
+
   static List<T> mapList<T>(dynamic v, T Function(dynamic) convert) {
     final raw = list<dynamic>(v);
     final out = <T>[];
     for (final e in raw) {
-      out.add(_wrap(() => convert(e), (null as T), 'mapList'));
+      final converted = _wrap<T?>(() => convert(e), null, 'mapList');
+      if (converted != null) out.add(converted);
     }
-    return out.where((e) => e != null).toList();
+    return out;
   }
 
   // --------------------------------------------------------
-  // 🧱 Enum helpers
+  // Enum helpers
   // --------------------------------------------------------
 
   static T enumValue<T>(
@@ -207,14 +382,14 @@ class JSafe {
   }
 
   // --------------------------------------------------------
-  // 🔍 Deep getter
+  // Deep getter (broader key support)
   // --------------------------------------------------------
 
   static dynamic getAt(Map<String, dynamic> m, String path) {
     dynamic cur = m;
     for (final seg in path.split('.')) {
       if (cur is Map) {
-        final matchIndex = RegExp(r'(\w+)(\[(\d+)\])?').firstMatch(seg);
+        final matchIndex = RegExp(r'([^.\[\]]+)(\[(\d+)\])?').firstMatch(seg);
         if (matchIndex == null) return null;
         final key = matchIndex.group(1)!;
         cur = cur[key];
@@ -236,10 +411,9 @@ class JSafe {
   }
 
   // --------------------------------------------------------
-  // 🧹 JSON cleanup
+  // JSON cleanup
   // --------------------------------------------------------
 
-  /// Removes all null values recursively from the given map.
   static Map<String, dynamic> omitNulls(Map<String, dynamic> map) {
     final out = <String, dynamic>{};
     map.forEach((k, v) {
@@ -248,11 +422,39 @@ class JSafe {
         final nested = omitNulls(v);
         if (nested.isNotEmpty) out[k] = nested;
       } else if (v is List) {
-        out[k] = v.where((e) => e != null).toList();
+        final cleaned = <dynamic>[];
+        for (final e in v) {
+          if (e == null) continue;
+          if (e is Map<String, dynamic>) {
+            final nested = omitNulls(e);
+            if (nested.isNotEmpty) cleaned.add(nested);
+          } else if (e is List) {
+            cleaned.add(_cleanListRecursively(e));
+          } else {
+            cleaned.add(e);
+          }
+        }
+        out[k] = cleaned;
       } else {
         out[k] = v;
       }
     });
+    return out;
+  }
+
+  static List<dynamic> _cleanListRecursively(List list) {
+    final out = <dynamic>[];
+    for (final e in list) {
+      if (e == null) continue;
+      if (e is Map<String, dynamic>) {
+        final nested = omitNulls(e);
+        if (nested.isNotEmpty) out.add(nested);
+      } else if (e is List) {
+        out.add(_cleanListRecursively(e));
+      } else {
+        out.add(e);
+      }
+    }
     return out;
   }
 }
